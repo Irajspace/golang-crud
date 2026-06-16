@@ -11,8 +11,9 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/irajspace/golang-crud/internal/types"
 	"github.com/irajspace/golang-crud/internal/utils/response"
+	"github.com/irajspace/golang-crud/internal/storage"
 )
-func New() http.HandlerFunc {
+func New(storage storage.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var student types.Student
 
@@ -46,15 +47,32 @@ func New() http.HandlerFunc {
 			)
 			return
 		}
-
-		slog.Info(
-			"student created",
-			"method", r.Method,
-			"url", r.URL.Path,
-			"student", student,
+		lastid, err := storage.CreateStudent(
+			student.Name,
+			student.Age,
+			student.Grade,
+		)
+		if err != nil {
+			response.WriteJSON(
+				w,
+				http.StatusInternalServerError,
+				response.GeneralError(errors.New("failed to create student")),
+			)
+			return
+		}
+		slog.Info("student created successfully", "id", lastid)
+		response.WriteJSON(
+			w,
+			http.StatusOK,
+			response.Response{
+				Status: response.StatusOK,
+				Message: "Student created successfully",
+				Data: map[string]interface{}{
+					"id": lastid,
+				},
+			},
 		)
 
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Hello, Student!"))
+	
 	}
 }
